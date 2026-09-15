@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADR Sync Simulator</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --panel-color: #2c2c2c;
+            --text-color: #f1f2f6;
+            --accent-color: #2ed573;
+            --error-color: #ff4757;
+            --border-color: #4a4a4a;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #fff;
+            display: flex;
+            justify-content: center;
+            margin: 20px;
+        }
+
+        .widget-container {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            border: 1px solid var(--border-color);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .header h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.8rem;
+            color: var(--accent-color);
+        }
+
+        .header p {
+            font-size: 0.95rem;
+            color: #a4b0be;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* Video Screen (The Actor) */
+        .video-screen {
+            background-color: #000;
+            height: 200px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .face {
+            width: 100px;
+            height: 100px;
+            background-color: #f1c27d;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .eyes {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .eye {
+            width: 12px;
+            height: 12px;
+            background-color: #2f3542;
+            border-radius: 50%;
+        }
+
+        .mouth {
+            width: 30px;
+            height: 6px;
+            background-color: #2f3542;
+            border-radius: 20px;
+            transition: all 0.05s ease; /* Fast transition for snapping */
+        }
+
+        /* Classes added via JS to simulate talking */
+        .mouth.open-wide {
+            height: 25px;
+            width: 25px;
+            border-radius: 50%;
+        }
+
+        .mouth.open-narrow {
+            height: 15px;
+            width: 35px;
+            border-radius: 10px;
+        }
+
+        /* Controls */
+        .controls {
+            background-color: var(--panel-color);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        .btn-noisy {
+            background-color: #747d8c;
+            color: white;
+        }
+
+        .btn-adr {
+            background-color: var(--accent-color);
+            color: #1a1a1a;
+        }
+
+        #feedback {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 15px;
+            min-height: 24px;
+            font-size: 1.1rem;
+        }
+
+        .success-text { color: var(--accent-color); }
+        .error-text { color: var(--error-color); }
+
+    </style>
+</head>
+<body>
+
+<div class="widget-container">
+    <div class="header">
+        <h3>The ADR Studio</h3>
+        <p>Your on-set audio was ruined by a passing airplane! Listen to the noisy take, then try to sync the clean studio ADR audio with the actor's lips.</p>
+    </div>
+
+    <!-- The Visual Actor -->
+    <div class="video-screen">
+        <div class="face">
+            <div class="eyes">
+                <div class="eye"></div>
+                <div class="eye"></div>
+            </div>
+            <div class="mouth" id="actor-mouth"></div>
+        </div>
+    </div>
+
+    <!-- The Editor Controls -->
+    <div class="controls">
+        <div class="btn-row" style="margin-bottom: 25px;">
+            <button class="btn-noisy" onclick="playScene(true)">1. Play On-Set Audio (Noisy)</button>
+        </div>
+
+        <div class="control-group">
+            <div class="label-row">
+                <span>ADR Sync Offset (Milliseconds)</span>
+                <span id="offset-display">0 ms</span>
+            </div>
+            <!-- Slider ranges from -500ms to +500ms -->
+            <input type="range" id="sync-slider" min="-500" max="500" value="300" oninput="updateDisplay()">
+        </div>
+
+        <div class="btn-row">
+            <button class="btn-adr" onclick="playScene(false)">2. Test ADR Sync (Clean)</button>
+        </div>
+    </div>
+
+    <div id="feedback"></div>
+</div>
+
+<script>
+    let audioCtx;
+    const mouth = document.getElementById('actor-mouth');
+    const slider = document.getElementById('sync-slider');
+    const display = document.getElementById('offset-display');
+    const feedback = document.getElementById('feedback');
+
+    // Initialize display with a deliberately bad offset
+    display.innerText = slider.value + " ms";
+
+    function updateDisplay() {
+        const val = slider.value;
+        display.innerText = val > 0 ? "+" + val + " ms" : val + " ms";
+        feedback.innerText = ""; // Clear feedback on adjustment
+    }
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
+
+    // Generates static white noise to simulate bad on-set conditions
+    function createWhiteNoise(time, duration) {
+        const bufferSize = audioCtx.sampleRate * duration;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+        
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = buffer;
+        
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(0.05, time); // Keep it low but noticeable
+        
+        noise.connect(gain);
+        gain.connect(audioCtx.destination);
+        noise.start(time);
+    }
+
+    // Generates a simple 2-syllable "synth voice" (sounds like "Wah-Wah")
+    function createSynthVoice(time, isNoisy) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        
+        osc.type = 'triangle';
+        
+        // Volume envelope for syllable 1
+        gain.gain.setValueAtTime(0, time);
+        gain.gain.linearRampToValueAtTime(isNoisy ? 0.1 : 0.8, time + 0.05);
+        gain.gain.linearRampToValueAtTime(0, time + 0.25);
+        
+        // Volume envelope for syllable 2
+        gain.gain.setValueAtTime(0, time + 0.3);
+        gain.gain.linearRampToValueAtTime(isNoisy ? 0.1 : 0.8, time + 0.35);
+        gain.gain.linearRampToValueAtTime(0, time + 0.6);
+
+        // Pitch envelope for "talking" inflection
+        osc.frequency.setValueAtTime(200, time);
+        osc.frequency.exponentialRampToValueAtTime(300, time + 0.1);
+        osc.frequency.setValueAtTime(250, time + 0.3);
+        osc.frequency.exponentialRampToValueAtTime(150, time + 0.5);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.start(time);
+        osc.stop(time + 0.6);
+    }
+
+    // Handles the visual CSS animation of the lips
+    function animateLips() {
+        // Syllable 1
+        setTimeout(() => mouth.classList.add('open-wide'), 0);
+        setTimeout(() => mouth.classList.remove('open-wide'), 250);
+        
+        // Syllable 2
+        setTimeout(() => mouth.classList.add('open-narrow'), 300);
+        setTimeout(() => mouth.classList.remove('open-narrow'), 600);
+    }
+
+    function playScene(isNoisy) {
+        initAudio();
+        const currentTime = audioCtx.currentTime;
+        
+        // The visual animation always starts exactly at +0.2 seconds
+        const visualStartTime = 0.2; 
+        
+        // If it's noisy (on-set), audio is perfectly in sync.
+        // If it's ADR, audio is offset by whatever the user set on the slider.
+        const audioOffset = isNoisy ? 0 : (parseInt(slider.value) / 1000);
+        const audioStartTime = currentTime + visualStartTime + audioOffset;
+
+        // Schedule Visuals
+        setTimeout(animateLips, visualStartTime * 1000);
+
+        // Schedule Audio
+        if (isNoisy) {
+            createWhiteNoise(currentTime, 1.0); // 1 second of airplane noise
+            createSynthVoice(audioStartTime, true); // Muffled on-set voice
+            feedback.innerText = "Listen to that terrible airplane noise!";
+            feedback.className = "";
+        } else {
+            createSynthVoice(audioStartTime, false); // Clean, loud studio voice
+            evaluateSync(parseInt(slider.value));
+        }
+    }
+
+    function evaluateSync(offset) {
+        // ADR needs to be incredibly precise.
+        if (offset === 0) {
+            feedback.innerText = "🎬 PERFECT SYNC! The audience will never know it was dubbed.";
+            feedback.className = "success-text";
+        } else if (Math.abs(offset) <= 50) {
+            feedback.innerText = "Close, but at " + offset + "ms off, the lips look slightly fake.";
+            feedback.className = "error-text";
+        } else {
+            feedback.innerText = "Terrible sync! (" + offset + "ms). It looks like a badly dubbed movie!";
+            feedback.className = "error-text";
+        }
+    }
+</script>
+
+</body>
+</html>
